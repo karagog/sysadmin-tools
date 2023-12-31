@@ -1,0 +1,8 @@
+A collection of scripts for organizing photos.
+
+This was originally motivated by trying to organize a dump of photos
+from downloading my entire Google photos collection. All of the file timestamps
+were wrong, and many of the files were duplicated. These scripts avoid a lot
+of manual toil.
+
+There are also scripts to automatically sync photos from an external drive.

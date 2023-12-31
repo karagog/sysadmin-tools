@@ -1,0 +1,19 @@
+; This is a systemd configuration to start the NodeExporter service,
+; which exports a lot of useful hardware metrics to Prometheus.
+[Unit]
+Description=NodeExporter Prometheus Hardware Monitor
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/node_exporter
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+SyslogIdentifier=node_exporter
+User=node-exporter
+Group=nogroup
+
+
+[Install]
+WantedBy=multi-user.target

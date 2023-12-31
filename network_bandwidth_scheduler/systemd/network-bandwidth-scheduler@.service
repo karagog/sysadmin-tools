@@ -1,0 +1,15 @@
+[Unit]
+Description=Network Bandwidth Scheduler
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/network_bandwidth_scheduler --nic=%i
+Restart=on-failure
+SyslogIdentifier=network-bandwidth-scheduler-%i
+User=root
+Group=nogroup
+
+
+[Install]
+WantedBy=multi-user.target

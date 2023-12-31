@@ -1,0 +1,15 @@
+[Unit]
+Description=Import and sort photos from a camera
+
+[Service]
+Type=oneshot
+WorkingDirectory=/usr/local/bin
+ExecStart=/usr/local/bin/import_photos.sh
+Restart=no
+SyslogIdentifier=import-photos
+User=root
+Group=root
+
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,233 @@
+#!/usr/bin/python
+# This program sorts a directory of photos by moving them into an output directory
+# structure that is organized by timestamp. There are two levels to the output structure,
+# the first is the year and the second is the month.
+#
+# This also supports Google photos exports, which can have JSON metadata alongside
+# the image files. This attempts to read the date from the JSON, if a date wasn't
+# found using other methods.
+from absl import app
+from absl import flags
+from absl import logging
+
+from typing import Optional
+
+from datetime import datetime
+import exifread
+import re
+import json
+import os
+import subprocess
+import sys
+import shutil
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string('input_path', '', 'The path to the directory containing new photos to be organized')
+flags.DEFINE_string('output_path', '', 'The path to the output directory for organized photos')
+flags.DEFINE_bool('n', False, 'Do a dry run. If true, then this program will evaluate but not modify anything.')
+
+def timestamp_from_object(time_obj):
+    return int(time_obj['timestamp'])
+
+
+def find_timestamp_in_json(json_obj):
+    time_obj = None
+    try:
+        time_obj = json_obj['creationTime']
+    except Exception as ex:
+        logging.vlog(1, f'Exception: {ex}')
+        pass
+
+    if time_obj is not None:
+        return timestamp_from_object(time_obj)
+
+    try:
+        return find_timestamp_in_json(json_obj['sharedAlbumComments'])
+    except Exception as ex:
+        logging.vlog(1, f'Exception: {ex}')
+        pass
+
+    try:
+        return timestamp_from_object(json_obj['date'])
+    except:
+        logging.vlog(1, f'Exception: {ex}')
+        pass
+    return 0
+
+
+def get_datetime_from_json(json_filepath) -> Optional[datetime]:
+    """Searches a JSON file (from Google photos) for a timestamp."""
+    f = open(json_filepath, 'r')
+
+    obj = json.loads(f.read())
+    try:
+        ts = find_timestamp_in_json(obj)
+    except Exception as ex:
+        logging.vlog(1, f'Exception: {ex}\n\tWhile parsing object: {obj}')
+        return None
+    return datetime.fromtimestamp(ts)
+
+
+def datetime_from_exif(exif_date_str: str) -> datetime:
+    """Converts the timestamp string from EXIF metadata into a datetime object.
+    
+    Some special checking needs to happen in order to handle some weird
+    metadata seen in real life.
+
+    Raises an exception unless a valid datetime is found.
+    """
+    # Chop off any decimal values, if they exist. We don't need to be that precise.
+    exif_date_str = exif_date_str.split('.')[0]
+    try:
+        return datetime.strptime(exif_date_str, '%Y:%m:%d %H:%M:%S')
+    except Exception as ex:
+        # Sometimes the EXIF date is invalid (so I have seen in real life examples).
+        # We need to suppress the error and try other methods to see if we can correct simple errors.
+        logging.vlog(1, ex)
+
+    # Check some corner cases that have occurred in real data.
+    m = re.match("""(\d+):(\d+):(\d+)( (\d+):(\d+):(\d+))?""", exif_date_str)
+    if m is None:
+        raise RuntimeError(f'Unrecognized EXIF date string: {exif_date_str}')
+    
+    year = int(m[1])
+    month = int(m[2])
+    day = int(m[3])
+    if len(m) > 3:
+        # Sometimes the hour could be reported as 24 instead of 0.
+        hour = m[4]
+        if hour == '24':
+            logging.vlog(1, 'The hour was 24, assuming this means 0...')
+            return datetime(year, month, day, 0, int(m[5]), int(m[6]))
+    
+    # If nothing else worked, then just try to get the date right.
+    return datetime(year, month, day)
+
+
+# Possible keys that the date could be logged in the EXIF metadata, in order of preference.
+EXIF_DATETIME_KEYS = [
+    'Image DateTime',
+    'Create Date',
+    'Date Created',
+]
+
+def get_exiftool_datetime(path: str) -> Optional[datetime]:
+    """Invokes 'exiftool' and returns the metadata tags in a dict."""
+    exif_data = str(subprocess.check_output(['exiftool', path], encoding="utf8"))
+    exif_map: dict[str, str] = {}
+    for line in exif_data.split('\n'):
+        exif_match = re.match("""(.*?)\s+:\s+(.*)""", line)
+        if exif_match:
+            exif_map[exif_match[1]] = exif_match[2]
+    logging.vlog(1, exif_map)
+    if not exif_map:
+        return None
+    
+    for key in EXIF_DATETIME_KEYS:
+        if not key in exif_map:
+            continue
+        try:
+            return datetime_from_exif(exif_map[key])
+        except Exception as ex:
+            logging.vlog(1, repr(ex))  # keep trying other values until we find a valid one
+    logging.warning(f'EXIF metadata exists, but no timestamp in file {path}: {exif_map}')
+    return None
+
+
+def get_timestamp(path: str) -> Optional[datetime]:
+    """Uses all available methods to find a timestamp for the given file.
+    
+    If there is EXIF metadata, it searches that first. Else it searches for a JSON file
+    (from Google photos export) which sometimes has this data.
+    """
+    logging.vlog(1, f'Searching for timestamp for {path}')
+
+    suffix = '.json'
+    if path.endswith(suffix):
+        return None
+
+    # First try to get the timestamp from the image metadata.
+    # Run exiftool on the file, which is able to read metadata more robustly than the 'exifreader' module.
+    dt = get_exiftool_datetime(path)
+    if dt:
+        return dt
+
+    # The filename may contain the date/time.
+    # Assume that an 8-digit number is a datetime in format YYYYMMDD.
+    filename = os.path.basename(path)
+    m = re.match("""^.*?[^\d](19|20\d{2})(\d{2})(\d{2}).*""", filename)
+    if m is None:
+        m = re.match("""^.*?(19|20\d{2})-(\d{2})-(\d{2}).*""", filename)
+    if m is not None:
+        try:
+            return datetime(year=int(m[1]), month=int(m[2]), day=int(m[3]), hour=0, minute=0, second=0)
+        except Exception as ex:
+            logging.vlog(1, repr(ex))
+
+
+    # If it wasn't found yet, continue searching for a JSON file.
+    # Try several permutations to find the json file that corresponds to this file.
+    jsonpath = path + suffix
+    if not os.path.isfile(jsonpath):
+        jsonpath = os.path.splitext(path)[0] + suffix
+    if not os.path.isfile(jsonpath):
+        logging.vlog(1, f'Unable to find json file for {path}')
+        return None
+
+    # Try to get the datetime from the json file.
+    return get_datetime_from_json(jsonpath)
+
+
+def inspect_and_sort(path: str):
+    """Inspects the given file and moves it to the appropriate output directory."""
+    dt = get_timestamp(path)
+    if dt is None:
+        logging.vlog(1, f'No timestamp found for file {path}')
+        dest = os.path.join(FLAGS.output_path, 'UNKNOWN_DATE')
+    else:
+        logging.vlog(1, f'Found timestamp {dt} for file {path}')
+        dest = os.path.join(FLAGS.output_path, f'{dt.year}', dt.strftime('%m - %B'))
+
+        # Set the last modify time to the timestamp we found, which is useful for sorting by timestamp.
+        try:
+            if not FLAGS.n:
+                os.utime(path, (dt.timestamp(), dt.timestamp()))
+        except Exception as ex:
+            logging.error(f'Exception: {ex}')
+            return None
+        logging.vlog(1, f'Updated {path} modify time to {dt}')
+
+    # Move the file to the appropriate directory based on the timestamp.
+    if not FLAGS.n:
+        if not os.path.isdir(dest):
+            os.makedirs(dest, exist_ok=True)
+
+        # Check if the file exists, and if so, give it a unique name.
+        dest_file = os.path.join(dest, os.path.basename(path))
+        if os.path.isfile(dest_file):
+            parts = os.path.splitext(dest_file)
+            dest_file = parts[0] + ' (copy)' + parts[1]
+
+        try:
+            shutil.move(path, dest_file)
+        except Exception as ex:
+            logging.error(f'Exception: {ex}')
+    logging.info(f'Moved {path} to {dest_file}')
+
+
+def main(unused_args):
+    if FLAGS.n:
+        logging.info('Not really modifying anything because "-n" was passed')
+    if not os.path.isdir(FLAGS.input_path):
+        raise RuntimeError(f'--input_path must be a valid directory, got "{FLAGS.input_path}"')
+    if not os.path.isdir(FLAGS.output_path):
+        raise RuntimeError(f'--output_path must be a valid directory, got "{FLAGS.output_path}"')
+
+    # Walk the input directory tree to touch all files.
+    for root, subdirs, files in os.walk(FLAGS.input_path):
+        for f in files:
+            inspect_and_sort(os.path.join(root, f))
+
+if __name__ == '__main__':
+  app.run(main)

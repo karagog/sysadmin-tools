@@ -1,0 +1,15 @@
+# This is an example udev rule configuration for a block device that contains photos that you want to sync.
+# With this configuration, the photos will be synced automatically as soon as you plug in the device.
+#
+# Assign a fixed name to the block device that stores the photos, and auto-mount it when plugged in.
+# Note that we pass --discover to systemd-mount, which makes it play nicer with removable drives. It will auto-mount
+# when accessed, and auto-umount when idle for more than 1 second, which makes it possible to just remove
+# the device when done, without special steps to unmount it.
+#
+# This also starts the "import-photos" service that runs in the background and syncs the photos from the block device
+# to the specific location.
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ACTION=="add|change", ENV{ID_SERIAL}=="Generic_MassStorageClass_000000002958-0:1", SYMLINK+="photos-sdcard-1tb", RUN+="/usr/bin/systemd-mount --no-block --automount=yes --discover /dev/photos-sdcard-1tb /mnt/photos", RUN+="/usr/bin/systemctl --no-block start import-photos"
+
+# Auto-unmount the drive when removed. Note that the drive is already in a clean state 1 second after
+# the last access, due to the mount options we declared above. 
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ACTION=="remove", ENV{ID_SERIAL}=="Generic_MassStorageClass_000000002958-0:1", RUN+="/usr/bin/systemd-mount --umount /mnt/photos"

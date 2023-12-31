@@ -1,0 +1,3 @@
+This is a service that applies network bandwidth limitations, optionally on a schedule.
+
+It comes with systemd configs to support easy non-blocking usage, which is important for some use cases like openvpn scripts.
