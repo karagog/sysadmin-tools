@@ -54,6 +54,11 @@ func New(nic string, throttleTimeStart, throttleTimeEnd time.Duration, clock clo
 		throttleTimeStart >= 24*time.Hour || throttleTimeEnd >= 24*time.Hour {
 		return nil, fmt.Errorf("times must be greater than 0 and less than 24 hours, got: %v, %v", throttleTimeStart, throttleTimeEnd)
 	}
+
+	// Clear any previous throttling that may be on this nic. If we don't, then the new
+	// settings won't be applied.
+	clearThrottling(nic)
+
 	return &Scheduler{
 		nic:                   nic,
 		clock:                 clock,

@@ -89,8 +89,8 @@ func TestNewStartThrottling(t *testing.T) {
 	if o.applyThrottlingCount > 0 {
 		t.Fatalf("Applied throttling %v times, want 0", o.applyThrottlingCount)
 	}
-	if o.clearThrottlingCount > 0 {
-		t.Fatalf("Cleared throttling %v times, want 0", o.clearThrottlingCount)
+	if o.clearThrottlingCount != 1 {
+		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
 	}
 
 	// Make sure we can run it, and that it obeys the context cancellation.
@@ -106,8 +106,8 @@ func TestNewStartThrottling(t *testing.T) {
 	if o.applyThrottlingCount != 1 {
 		t.Fatalf("Applied throttling %v times, want 1", o.applyThrottlingCount)
 	}
-	if o.clearThrottlingCount > 0 {
-		t.Fatalf("Cleared throttling %v times, want 0", o.clearThrottlingCount)
+	if o.clearThrottlingCount != 1 {
+		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
 	}
 }
 
@@ -132,8 +132,8 @@ func TestNewStartClearThrottling(t *testing.T) {
 	if o.applyThrottlingCount != 0 {
 		t.Fatalf("Applied throttling %v times, want 0", o.applyThrottlingCount)
 	}
-	if o.clearThrottlingCount != 1 {
-		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
+	if o.clearThrottlingCount != 2 {
+		t.Fatalf("Cleared throttling %v times, want 2", o.clearThrottlingCount)
 	}
 }
 
@@ -160,8 +160,8 @@ func TestNewAlwaysThrottling(t *testing.T) {
 	if o.applyThrottlingCount != 1 {
 		t.Fatalf("Applied throttling %v times, want 1", o.applyThrottlingCount)
 	}
-	if o.clearThrottlingCount != 0 {
-		t.Fatalf("Cleared throttling %v times, want 0", o.clearThrottlingCount)
+	if o.clearThrottlingCount != 1 {
+		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
 	}
 }
 
@@ -203,7 +203,7 @@ func TestLongRunningService(t *testing.T) {
 	if o.applyThrottlingCount != 2 {
 		t.Fatalf("Applied throttling %v times, want 1", o.applyThrottlingCount)
 	}
-	if o.clearThrottlingCount != 1 {
-		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
+	if o.clearThrottlingCount != 2 {
+		t.Fatalf("Cleared throttling %v times, want 2", o.clearThrottlingCount)
 	}
 }
