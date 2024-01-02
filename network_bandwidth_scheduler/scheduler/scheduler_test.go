@@ -89,6 +89,9 @@ func TestNewStartThrottling(t *testing.T) {
 	if o.applyThrottlingCount > 0 {
 		t.Fatalf("Applied throttling %v times, want 0", o.applyThrottlingCount)
 	}
+
+	// The throttling should be cleared on startup, otherwise new throttling settings
+	// cannot be applied over pre-existing ones (at least in the latest version of Wondershaper).
 	if o.clearThrottlingCount != 1 {
 		t.Fatalf("Cleared throttling %v times, want 1", o.clearThrottlingCount)
 	}
