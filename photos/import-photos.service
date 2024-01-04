@@ -1,10 +1,10 @@
 [Unit]
-Description=Import and sort photos from a camera
+Description=Import and sort photos from a removable drive
 
 [Service]
 Type=oneshot
 WorkingDirectory=/usr/local/bin
-ExecStart=/usr/local/bin/import_photos.sh
+ExecStart=/usr/local/bin/import_photos_removable_drive.sh
 Restart=no
 SyslogIdentifier=import-photos
 User=root

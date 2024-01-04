@@ -15,7 +15,7 @@ IMPORT_PHOTOS_DIR=/mnt/photos/DCIM/100CANON
 STAGING_DIR=/home/george/pictures/new
 OUTPUT_DIR=/home/george/pictures
 OWNER=george:george
-BEEP_CONFIRMATION=1  # optionally disable the beep at the end
+BEEP_CONFIRMATION=1 # optionally disable the beep at the end
 
 # Wait some time for the photos directory to be mounted.
 timeout=60
@@ -50,10 +50,9 @@ fi
 
 # Beep to let the user know that the work is done.
 if [ $BEEP_CONFIRMATION -eq 1 ]; then
-	for n in 1 2 3 ; do
-	    for f in 1 2 1 2 1 2 1 2 1 2 ; do
-	      beep -f ${f}000 -l 20
-	    done
+	for n in 1 2 3; do
+		for f in 1 2 1 2 1 2 1 2 1 2; do
+			beep -f ${f}000 -l 20
+		done
 	done
 fi
-
