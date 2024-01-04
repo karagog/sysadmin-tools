@@ -48,7 +48,8 @@ if [ $FILE_COUNT -ne 0 ]; then
 	rm "$IMPORT_PHOTOS_DIR"/*
 fi
 
-# Beep to let the user know that the work is done.
+# Beep to let the user know that the work is done. This enables completely
+# hands-off syncing, so you can just wait for the beep and remove the drive.
 if [ $BEEP_CONFIRMATION -eq 1 ]; then
 	for n in 1 2 3; do
 		for f in 1 2 1 2 1 2 1 2 1 2; do

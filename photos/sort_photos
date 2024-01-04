@@ -26,6 +26,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('input_path', '', 'The path to the directory containing new photos to be organized')
 flags.DEFINE_string('output_path', '', 'The path to the output directory for organized photos')
 flags.DEFINE_bool('n', False, 'Do a dry run. If true, then this program will evaluate but not modify anything.')
+flags.DEFINE_bool('ignore_conflicts', False, 'If true, then file conflicts will result in not syncing the file. '
+    'The default behavior is to sync the file but create a unique name to avoid clobbering the original.')
 
 def timestamp_from_object(time_obj):
     return int(time_obj['timestamp'])
@@ -199,16 +201,25 @@ def inspect_and_sort(path: str):
         logging.vlog(1, f'Updated {path} modify time to {dt}')
 
     # Move the file to the appropriate directory based on the timestamp.
-    if not FLAGS.n:
-        if not os.path.isdir(dest):
+    if not os.path.isdir(dest):
+        logging.debug(f'Making directory: {dest}')
+        if not FLAGS.n:
             os.makedirs(dest, exist_ok=True)
 
-        # Check if the file exists, and if so, give it a unique name.
-        dest_file = os.path.join(dest, os.path.basename(path))
-        if os.path.isfile(dest_file):
-            parts = os.path.splitext(dest_file)
-            dest_file = parts[0] + ' (copy)' + parts[1]
+    # Check if the destination file exists.
+    basename = os.path.basename(path)
+    dest_file = os.path.join(dest, basename)
+    if os.path.isfile(dest_file):
+        if FLAGS.ignore_conflicts:
+            logging.debug(f'Not syncing "{basename}" which already exists at "{dest_file}"')
+            return  # skip this file because it already exists
 
+        # Create a unique filename to avoid the conflict.
+        parts = os.path.splitext(dest_file)
+        dest_file = parts[0] + ' (copy)' + parts[1]
+        logging.debug(f'Creating unique filename to avoid conflict: {dest_file}')
+
+    if not FLAGS.n:
         try:
             shutil.move(path, dest_file)
         except Exception as ex:
