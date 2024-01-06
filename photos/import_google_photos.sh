@@ -7,10 +7,24 @@
 
 set -e
 
-GOOGLE_PHOTOS_EXPORT_DIR=/home/george/pictures/tmp/input
-STAGING_DIR=/home/george/pictures/tmp/staging
-OUTPUT_DIR=/home/george/pictures/tmp/out
+GOOGLE_PHOTOS_EXPORT_DIR=$1
+STAGING_DIR=/home/george/pictures/staging
+OUTPUT_DIR=/home/george/pictures
 OWNER=george:george
+
+exit_usage() {
+	echo "Usage: import_google_photos.sh <path_to_google_photos>"
+	exit 1
+}
+
+if [ -z $GOOGLE_PHOTOS_EXPORT_DIR ]; then
+	exit_usage
+fi
+
+if [ ! -d "$GOOGLE_PHOTOS_EXPORT_DIR" ]; then
+	echo "Import path does not exist: $GOOGLE_PHOTOS_EXPORT_DIR"
+	exit_usage
+fi
 
 # Copy the photos to the staging directory.
 if [ ! -d "$STAGING_DIR" ]; then
@@ -19,9 +33,7 @@ fi
 
 FILE_COUNT=$(ls -A "$GOOGLE_PHOTOS_EXPORT_DIR" | wc -l)
 if [ $FILE_COUNT -ne 0 ]; then
-	# Create hard-links to the photos in the staging dir, which is fast, and
-	# lets us operate on the photos while preserving the original content.
-	cp -rlv "$GOOGLE_PHOTOS_EXPORT_DIR"/* "$STAGING_DIR"
+	cp -rv "$GOOGLE_PHOTOS_EXPORT_DIR"/* "$STAGING_DIR"
 	chown -R "$OWNER" "$STAGING_DIR"/*
 fi
 
@@ -38,4 +50,4 @@ fi
 
 # Sort the photos into the output directory, except those that would conflict
 # with existing files at the destination.
-sort_photos --ignore_conflicts --input_path=$STAGING_DIR --output_path=$OUTPUT_DIR
+sort_photos --input_path=$STAGING_DIR --output_path=$OUTPUT_DIR
