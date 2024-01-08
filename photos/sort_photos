@@ -28,6 +28,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('input_path', '', 'The path to the directory containing new photos to be organized')
 flags.DEFINE_string('output_path', '', 'The path to the output directory for organized photos')
 flags.DEFINE_string('owner_user', '', 'The user that owns the photos repository. Leave blank to assume ownership belongs to the program runner.')
+flags.DEFINE_bool('skip_duplicate_filenames', False, 'If true, then photos with duplicate filenames will be treated as duplicates, regardless of the file content.')
 flags.DEFINE_bool('n', False, 'Do a dry run. If true, then this program will evaluate but not modify anything.')
 
 def timestamp_from_object(time_obj):
@@ -222,6 +223,10 @@ def inspect_and_sort(path: str):
         if is_duplicate(path, dest_file):
             logging.info(f'Not importing "{basename}" which already exists at "{dest_file}"')
             return  # skip this file because it already exists
+        
+        if FLAGS.skip_duplicate_filenames:
+            logging.info(f'Not importing "{basename}" which filename already exists at "{dest_file}", even though the file contents are different')
+            return  # skip this file because we were told to skip duplicate filenames
 
         # The file at the destination is different, despite having the same filename.
         # Create a unique filename to avoid the conflict.
