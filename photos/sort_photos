@@ -18,6 +18,7 @@ import filecmp
 import re
 import json
 import os
+import pwd
 import subprocess
 import sys
 import shutil
@@ -26,6 +27,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('input_path', '', 'The path to the directory containing new photos to be organized')
 flags.DEFINE_string('output_path', '', 'The path to the output directory for organized photos')
+flags.DEFINE_string('owner_user', '', 'The user that owns the photos repository. Leave blank to assume ownership belongs to the program runner.')
 flags.DEFINE_bool('n', False, 'Do a dry run. If true, then this program will evaluate but not modify anything.')
 
 def timestamp_from_object(time_obj):
@@ -209,6 +211,9 @@ def inspect_and_sort(path: str):
         logging.debug(f'Making directory: {dest}')
         if not FLAGS.n:
             os.makedirs(dest, exist_ok=True)
+            if FLAGS.owner_user:
+                user_info = pwd.getpwnam(FLAGS.owner_user)
+                os.chown(dest, user_info.pw_uid, user_info.pw_gid)
 
     # Check if the destination file exists.
     basename = os.path.basename(path)
