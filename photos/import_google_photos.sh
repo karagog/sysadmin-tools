@@ -50,4 +50,7 @@ fi
 
 # Sort the photos into the output directory, except those that would conflict
 # with existing files at the destination.
-sort_photos --input_path=$STAGING_DIR --output_path=$OUTPUT_DIR
+# Skip duplicate filenames, because it's hard/impossible to tell if the Google photo is
+# a true duplicate with a local master copy, due to compression that they apply to photos you upload.
+# So here we assume that duplicate filenames imply a duplicate picture.
+sort_photos --input_path=$STAGING_DIR --output_path=$OUTPUT_DIR --skip_duplicate_filenames
