@@ -91,7 +91,7 @@ def datetime_from_exif(exif_date_str: str) -> datetime:
         logging.vlog(1, ex)
 
     # Check some corner cases that have occurred in real data.
-    m = re.match("""(\d+):(\d+):(\d+)( (\d+):(\d+):(\d+))?""", exif_date_str)
+    m = re.match(r"""(\d+):(\d+):(\d+)( (\d+):(\d+):(\d+))?""", exif_date_str)
     if m is None:
         raise RuntimeError(f'Unrecognized EXIF date string: {exif_date_str}')
     
@@ -121,7 +121,7 @@ def get_exiftool_datetime(path: str) -> Optional[datetime]:
     exif_data = str(subprocess.check_output(['exiftool', path], encoding="utf8"))
     exif_map: dict[str, str] = {}
     for line in exif_data.split('\n'):
-        exif_match = re.match("""(.*?)\s+:\s+(.*)""", line)
+        exif_match = re.match(r"""(.*?)\s+:\s+(.*)""", line)
         if exif_match:
             exif_map[exif_match[1]] = exif_match[2]
     logging.vlog(1, exif_map)
@@ -160,9 +160,9 @@ def get_timestamp(path: str) -> Optional[datetime]:
     # The filename may contain the date/time.
     # Assume that an 8-digit number is a datetime in format YYYYMMDD.
     filename = os.path.basename(path)
-    m = re.match("""^.*?[^\d](19|20\d{2})(\d{2})(\d{2}).*""", filename)
+    m = re.match(r"""^.*?[^\d](19|20\d{2})(\d{2})(\d{2}).*""", filename)
     if m is None:
-        m = re.match("""^.*?(19|20\d{2})-(\d{2})-(\d{2}).*""", filename)
+        m = re.match(r"""^.*?(19|20\d{2})-(\d{2})-(\d{2}).*""", filename)
     if m is not None:
         try:
             return datetime(year=int(m[1]), month=int(m[2]), day=int(m[3]), hour=0, minute=0, second=0)
