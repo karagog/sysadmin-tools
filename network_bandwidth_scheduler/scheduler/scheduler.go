@@ -91,6 +91,8 @@ func (s *Scheduler) Run(ctx context.Context) {
 			t.Stop()
 			s.toggleBandwidthEnforcement()
 		case <-ctx.Done():
+			// Clear throttling on service exit.
+			clearThrottling(s.nic)
 			return
 		}
 	}
