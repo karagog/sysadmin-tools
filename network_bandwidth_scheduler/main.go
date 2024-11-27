@@ -26,10 +26,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot initialize scheduler: %v", err)
 	}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		s.Run(context.Background())
-	}()
-	<-done // wait here until the background routine finishes
+	s.Run(context.Background())
 }
