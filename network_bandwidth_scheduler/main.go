@@ -7,6 +7,9 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"example.com/sysadmin/network_bandwidth_scheduler/scheduler"
 	"github.com/karagog/clock-go/real"
@@ -22,9 +25,25 @@ func main() {
 		log.Fatal("--nic must be specified")
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle termination signals so we can exit gracefully.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		select {
+		case s := <-ch:
+			log.Printf("Signal received (%v). Exiting...", s)
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	// Run the scheduler until canceled.
 	s, err := scheduler.New(*nic, *start, *end, &real.Clock{})
 	if err != nil {
 		log.Fatalf("Cannot initialize scheduler: %v", err)
 	}
-	s.Run(context.Background())
+	s.Run(ctx)
 }
