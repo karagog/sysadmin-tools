@@ -45,5 +45,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot initialize scheduler: %v", err)
 	}
+	defer s.Close()
 	s.Run(ctx)
 }

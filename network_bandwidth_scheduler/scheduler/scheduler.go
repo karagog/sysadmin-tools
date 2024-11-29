@@ -67,6 +67,7 @@ func New(nic string, throttleTimeStart, throttleTimeEnd time.Duration, clock clo
 	}, nil
 }
 
+// Run runs the bandwidth scheduler.
 func (s *Scheduler) Run(ctx context.Context) {
 	// Update throttling for the first time on startup.
 	if s.nextThrottleStartTime == s.nextThrottleEndTime {
@@ -91,11 +92,15 @@ func (s *Scheduler) Run(ctx context.Context) {
 			t.Stop()
 			s.toggleBandwidthEnforcement()
 		case <-ctx.Done():
-			// Clear throttling on service exit.
-			clearThrottling(s.nic)
 			return
 		}
 	}
+}
+
+// Close cleans up any bandwidth limits.
+func (s *Scheduler) Close() {
+	// Clear throttling on service exit.
+	clearThrottling(s.nic)
 }
 
 func (s *Scheduler) toggleBandwidthEnforcement() {
