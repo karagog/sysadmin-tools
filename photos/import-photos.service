@@ -7,8 +7,8 @@ WorkingDirectory=/usr/local/bin
 ExecStart=/usr/local/bin/import_photos_removable_drive.sh
 Restart=no
 SyslogIdentifier=import-photos
-User=root
-Group=root
+User=george
+Group=george
 
 
 [Install]
